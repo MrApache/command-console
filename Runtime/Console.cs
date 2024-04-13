@@ -8,11 +8,13 @@ namespace RB.Console
 {
     public static class Console
     {
-        private readonly static Dictionary<string, Command> _commands;
         private const BindingFlags FLAGS = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+        private readonly static Dictionary<string, Command> _commands;
+        private readonly static HashSet<object> _objectsWithCommands; 
 
         static Console()
         {
+            _objectsWithCommands = new HashSet<object>();
             _commands = new Dictionary<string, Command>();
             SceneManager.activeSceneChanged += (_,_) => Init();
             Init();
@@ -22,7 +24,12 @@ namespace RB.Console
         {
             Reset();
             FindStaticMethods();
-            FindAttributes();
+            FindAllComponents();
+
+            foreach (var obj in _objectsWithCommands)
+            {
+                RegisterCommands(obj);
+            }
         }
 
         public static void RegisterCommands<T>(T target)
@@ -34,6 +41,11 @@ namespace RB.Console
                 var command = new Command(target, attrb.CommandName, method);
                 _commands[command.Name] = command;
             }
+
+            if (target == null)
+                return;
+
+            _objectsWithCommands.Add(target);
         }
 
         public static void RemoveCommands<T>(T target)
@@ -54,6 +66,7 @@ namespace RB.Console
         public static void Reset()
         {
             _commands.Clear();
+            _objectsWithCommands.TrimExcess();
         }
 
         public static bool Execute(string command, params object[] parameters)
@@ -91,30 +104,28 @@ namespace RB.Console
             var types = Assembly.GetExecutingAssembly()
                 .GetTypes()
                 .Where(t => t.IsClass && t.IsAbstract && t.IsSealed);
+
             foreach (var type in types)
             {
                 RegisterCommands(type);
             }
         }
 
-        private static void FindAttributes()
+        private static void FindAllComponents()
         {
-            var components = GetAllComponents();
-            foreach (var component in components)
+            var objects = Resources.FindObjectsOfTypeAll(typeof(MonoBehaviour));
+            foreach (MonoBehaviour obj in objects.Cast<MonoBehaviour>())
             {
-                RegisterCommands(component);
+                _objectsWithCommands.AddRange(obj.GetComponents(typeof(Component)));
             }
         }
 
-        private static IEnumerable<Component> GetAllComponents()
+        private static void AddRange<T>(this HashSet<T> destination, IEnumerable<T> source)
         {
-            var objects = Resources.FindObjectsOfTypeAll(typeof(MonoBehaviour));
-            List<Component> components = new List<Component>();
-            foreach (MonoBehaviour obj in objects.Cast<MonoBehaviour>())
+            foreach (T item in source)
             {
-                components.AddRange(obj.GetComponents(typeof(Component)));
+                destination.Add(item);
             }
-            return components;
         }
     }
 }
