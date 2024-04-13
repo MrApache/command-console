@@ -10,6 +10,8 @@ namespace RB.Console.Tests
         public const string LOAD_COMMANDS = "load_commands";
         public const string TEST_METHOD_A = "test_method_a";
 
+        private FieldExample _example = new FieldExample();
+
         [ConsoleCommand(TEST_COMMAND_WITH_PARAMS)]
         public static void Test(string message, int num)
         {

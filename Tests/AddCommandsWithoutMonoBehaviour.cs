@@ -11,7 +11,9 @@ namespace RB.Console.Tests
             Console.RegisterCommands(this);
 
             Assert.IsTrue(Console.CommandExists("foo_command"));
-            Console.Execute("foo_command");
+            Assert.IsTrue(Console.Execute("foo_command"));
+
+            Console.Reset();
         }
 
         [ConsoleCommand("foo_command")]
